@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Card Game</title>
+    <link href="./dist/output.css" rel="stylesheet" />
+  </head>
+  <body class="bg-slate-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8">
+      <h1 class="text-4xl font-bold text-center mb-8">Card Game</h1>
+
+      <!-- Player Tags Display -->
+      <div id="playerTags" class="flex flex-wrap gap-2 mb-8"></div>
+
+      <!-- Player Input Form -->
+      <div class="max-w-md mx-auto bg-slate-800 p-6 rounded-lg shadow-lg mb-8">
+        <form id="playerForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Player Name</label>
+            <input
+              type="text"
+              id="playerInput"
+              class="w-full p-2 rounded bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter player name"
+            />
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded transition-colors">Add Player</button>
+        </form>
+        <button id="no-more-players" class="w-full bg-green-600 hover:bg-green-700 py-2 px-4 rounded transition-colors mt-4">Finish</button>
+      </div>
+
+      <!-- Add new cards container -->
+      <div id="cardsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8"></div>
+    </div>
+
+    <script>
+      const players = [];
+      const maxPlayers = 10;
+
+      document.getElementById("playerForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = document.getElementById("playerInput");
+        const name = input.value.trim();
+
+        if (name && players.length < maxPlayers) {
+          players.push(name);
+          updatePlayerTags();
+          input.value = "";
+
+          if (players.length === maxPlayers) {
+            document.getElementById("playerForm").style.display = "none";
+          }
+        }
+      });
+
+      document.getElementById("no-more-players").addEventListener("click", () => {
+        const playerForm = document.getElementById("playerForm");
+        playerForm.style.display = "none";
+
+        if (players.length > 0) {
+          generateCards();
+        }
+      });
+
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function generateCards() {
+        const cardsGrid = document.getElementById("cardsGrid");
+        const numbers = shuffleArray([...Array(players.length)].map((_, i) => i + 1));
+        const shuffledCards = players
+          .map((player, index) => ({
+            name: player,
+            number: numbers[index],
+          }))
+          .sort((a, b) => a.number - b.number); // Sort by number
+
+        cardsGrid.innerHTML = shuffledCards
+          .map(
+            (card) => `
+            <div class="bg-slate-800 p-6 rounded-lg shadow-lg text-center">
+              <h3 class="text-xl font-bold mb-2">${card.name}</h3>
+              <div class="text-3xl font-bold text-blue-500">${card.number}</div>
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      function updatePlayerTags() {
+        const tagsContainer = document.getElementById("playerTags");
+        tagsContainer.innerHTML = players
+          .map(
+            (player, index) => `
+          <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 group hover:bg-blue-200 transition-colors duration-200">
+            ${player}
+            <button onclick="removePlayer(${index})" class="ml-2 text-blue-400 hover:text-blue-600 focus:outline-none group-hover:text-blue-700 transition-colors duration-200">
+              <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </span>
+        `
+          )
+          .join("");
+      }
+
+      function removePlayer(index) {
+        players.splice(index, 1);
+        updatePlayerTags();
+        if (players.length === 0) {
+          document.getElementById("playerForm").style.display = "block";
+        }
+      }
+    </script>
+  </body>
+</html>
