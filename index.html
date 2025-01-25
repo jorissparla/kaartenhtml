@@ -37,7 +37,7 @@
         </div>
 
         <!-- Cards Grid -->
-        <div id="cardsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8"></div>
+        <div id="cardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8"></div>
       </div>
 
       <!-- Divider -->
@@ -56,24 +56,7 @@
       const players = [];
       const maxPlayers = 10;
 
-      const sampleNames = [
-        "John",
-        "Emma",
-        "Michael",
-        "Sarah",
-        "David",
-        "Lisa",
-        "James",
-        "Anna",
-        "Peter",
-        "Laura",
-        "Tom",
-        "Kate",
-        "Robert",
-        "Maria",
-        "William",
-        "Sophie",
-      ];
+      const sampleNames = ["Joris", "Rene", "Boudewijn", "JanB", "JanJ", "Koos", "Johan", "Ronald", "Mart", "Frank"];
 
       function generateRandomPlayers() {
         const shuffled = shuffleArray([...sampleNames]);
@@ -162,7 +145,7 @@
             (round, roundIndex) => `
           <div class="bg-slate-100 p-6 rounded-lg shadow-sm">
             <h3 class="text-xl font-bold mb-4 text-slate-800">Round ${roundIndex + 1}</h3>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               ${round
                 .map(
                   (match, i) => `
