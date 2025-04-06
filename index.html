@@ -19,7 +19,7 @@
         <div class="max-w-md mx-auto bg-slate-800 p-6 rounded-lg shadow-lg mb-8">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Add Players</h2>
-            <button id="quickFill" class="text-sm bg-purple-600 hover:bg-purple-700 py-1 px-3 rounded transition-colors">Quick Fill (8)</button>
+            <button id="quickFill" class="text-sm bg-purple-600 hover:bg-purple-700 py-1 px-3 rounded transition-colors">Quick Fill (12)</button>
           </div>
           <form id="playerForm" class="space-y-4">
             <div>
@@ -56,11 +56,11 @@
       const players = [];
       const maxPlayers = 10;
 
-      const sampleNames = ["Joris", "Rene", "Boudewijn", "JanB", "JanJ", "Koos", "Johan", "Ronald", "Mart", "Frank"];
+      const sampleNames = ["Joris", "Rene", "Boudewijn", "JanB", "JanJ", "Koos", "Johan", "Ronald", "Mart", "Frank", "Invaller1", "Invaller2"];
 
       function generateRandomPlayers() {
         const shuffled = shuffleArray([...sampleNames]);
-        const selectedNames = shuffled.slice(0, 10);
+        const selectedNames = shuffled.slice(0, 12);
 
         players.length = 0; // Clear existing players
         selectedNames.forEach((name) => {
