@@ -19,7 +19,7 @@
         <div class="max-w-md mx-auto bg-slate-800 p-6 rounded-lg shadow-lg mb-8">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Add Players</h2>
-            <button id="quickFill" class="text-sm bg-purple-600 hover:bg-purple-700 py-1 px-3 rounded transition-colors">Quick Fill (12)</button>
+            <button id="quickFill" class="text-sm bg-purple-600 hover:bg-purple-700 py-1 px-3 rounded transition-colors">Quick Fill</button>
           </div>
           <form id="playerForm" class="space-y-4">
             <div>
@@ -56,11 +56,28 @@
       const players = [];
       const maxPlayers = 10;
 
-      const sampleNames = ["Joris", "Rene", "Boudewijn", "JanB", "JanJ", "Koos", "Johan", "Ronald", "Mart", "Frank", "Invaller1", "Invaller2"];
-
+      const sampleNames = [
+        "Joris",
+        "Rene",
+        "Boudewijn",
+        "JanB",
+        "JanJ",
+        "Koos",
+        "Johan",
+        "Ronald",
+        "Mart",
+        "Frank",
+        "Justin",
+        "Jurgen",
+        "Johnny",
+        "Willem",
+        "Edwin",
+        "Martijn",
+      ].sort((a, b) => a.localeCompare(b)); // Sort names alphabetically
+      console.log("Sample names:", sampleNames);
       function generateRandomPlayers() {
         const shuffled = shuffleArray([...sampleNames]);
-        const selectedNames = shuffled.slice(0, 12);
+        const selectedNames = shuffled;
 
         players.length = 0; // Clear existing players
         selectedNames.forEach((name) => {
@@ -95,7 +112,9 @@
         }
       });
 
-      document.getElementById("quickFill").addEventListener("click", () => {
+      const quickFillButton = document.getElementById("quickFill");
+      quickFillButton.textContent = `Quick Fill (${sampleNames.length})`;
+      quickFillButton.addEventListener("click", () => {
         generateRandomPlayers();
       });
 
@@ -118,11 +137,17 @@
           playerNumbers.push({ name: "Dummy", number: "-" });
         }
 
+        // Determine number of courts based on player count
+        const numCourts = playerNumbers.length >= 12 ? 3 : 2;
+
         for (let round = 0; round < 3; round++) {
           const matches = [];
           const availablePlayers = [...playerNumbers];
 
-          while (availablePlayers.length >= 4) {
+          // Create matches based on available courts
+          let courtCount = 0;
+
+          while (availablePlayers.length >= 4 && courtCount < numCourts) {
             const team1 = [
               availablePlayers.splice(Math.floor(Math.random() * availablePlayers.length), 1)[0],
               availablePlayers.splice(Math.floor(Math.random() * availablePlayers.length), 1)[0],
@@ -132,6 +157,7 @@
               availablePlayers.splice(Math.floor(Math.random() * availablePlayers.length), 1)[0],
             ];
             matches.push({ team1, team2 });
+            courtCount++;
           }
           rounds.push(matches);
         }
