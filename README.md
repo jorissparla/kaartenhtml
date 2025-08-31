@@ -39,3 +39,12 @@ Install the dependencies and run the application:
 npm install
 npm run dev
 ```
+
+## Theming
+
+- Uses CSS variables with a `data-theme` on the app root for consistent, GitHub‑like neutrals and subtle borders.
+- Themes available: `Light`, `Dark`, `Ocean`, `Forest`, `High Contrast`, and pastel variants: `Pastel Blue`, `Pastel Pink`, `Pastel Purple`, `Pastel Orange`, `Pastel Mint`, `Pastel Yellow`. Ocean/Forest and pastels vary only the accent, keeping neutrals consistent.
+- Tokens are defined in `src/index.css` (e.g., `--bg`, `--fg`, `--surface`, `--border`, `--primary`).
+- Components use semantic utilities that read tokens: `bg-[var(--bg)]`, `text-[var(--fg)]`, `bg-surface`, `border-token`, `text-accent`.
+- Theme selection persists in `localStorage` and is applied via `data-theme`.
+- The Theme dialog shows a small color swatch for each theme.
