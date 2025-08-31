@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
 type PlayerNum = { name: string; number: number | '-' }
-type Match = { team1: PlayerNum[]; team2: PlayerNum[] }
+type Match = { team1: [PlayerNum, PlayerNum]; team2: [PlayerNum, PlayerNum] }
 
 
 
@@ -11,7 +11,9 @@ function shuffle<T>(array: T[]): T[] {
   const arr = [...array]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    const tmp = arr[i]!
+    arr[i] = arr[j]!
+    arr[j] = tmp
   }
   return arr
 }
@@ -26,13 +28,13 @@ function generateMatches(players: string[]): Match[][] {
     const available = [...playerNumbers]
     let courtCount = 0
     while (available.length >= 4 && courtCount < numCourts) {
-      const team1: PlayerNum[] = [
-        available.splice(Math.floor(Math.random() * available.length), 1)[0],
-        available.splice(Math.floor(Math.random() * available.length), 1)[0],
+      const team1: [PlayerNum, PlayerNum] = [
+        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
+        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
       ]
-      const team2: PlayerNum[] = [
-        available.splice(Math.floor(Math.random() * available.length), 1)[0],
-        available.splice(Math.floor(Math.random() * available.length), 1)[0],
+      const team2: [PlayerNum, PlayerNum] = [
+        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
+        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
       ]
       matches.push({ team1, team2 })
       courtCount++
@@ -55,7 +57,8 @@ export default function App() {
   const [themeOpen, setThemeOpen] = useState<boolean>(false)
   const [settingsNames, setSettingsNames] = useState<string[]>([])
   const [newSampleName, setNewSampleName] = useState('')
-  const [selectedTheme, setSelectedTheme] = useState<Theme>(themes[0]);
+  const defaultTheme: Theme = themes.find((t) => t.id === 'light') ?? { name: 'Light', id: 'light', swatch: '#0969da' }
+  const [selectedTheme, setSelectedTheme] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
     async function load() {
@@ -96,8 +99,8 @@ export default function App() {
   useEffect(() => {
     const savedThemeName = localStorage.getItem('theme');
     if (savedThemeName) {
-      const theme = themes.find((t) => t.name === savedThemeName);
-      if (theme) setSelectedTheme(theme);
+      const found = themes.find((t) => t.name === savedThemeName);
+      setSelectedTheme((prev) => (found ? found : prev));
     }
   }, []);
 
@@ -152,12 +155,12 @@ export default function App() {
     setPlayers(shuffle(sampleNames))
   }
 
-  const numbers = React.useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults])
-  const cards = React.useMemo(
-    () => players.map((name, i) => ({ name, number: numbers[i] })).sort((a, b) => a.number - b.number),
+  const numbers = useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults])
+  const cards = useMemo(
+    () => players.map((name, i) => ({ name, number: numbers[i] ?? i + 1 })).sort((a, b) => a.number - b.number),
     [players, numbers]
   )
-  const rounds = React.useMemo<Match[][]>(() => (showResults ? generateMatches(players) : []), [showResults, players])
+  const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players) : []), [showResults, players])
 
   function openSettings() {
     setSettingsNames(sampleNames)
