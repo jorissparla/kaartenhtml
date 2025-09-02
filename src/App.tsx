@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Toaster, toast } from 'react-hot-toast';
 
 type PlayerNum = { name: string; number: number | '-' }
 type Match = { team1: [PlayerNum, PlayerNum]; team2: [PlayerNum, PlayerNum] }
@@ -108,12 +109,14 @@ export default function App() {
     localStorage.setItem('theme', selectedTheme.name);
   }, [selectedTheme]);
 
-  async function saveSampleNames(names: string[], { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}) {
+  
+
+async function saveSampleNames(names: string[], { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}) {
     const cleaned = Array.from(new Set((names || []).map((n) => (typeof n === 'string' ? n.trim() : '')).filter(Boolean))).sort(
       (a, b) => a.localeCompare(b)
     )
     if (cleaned.length === 0) {
-      if (!silent) alert('Cannot save empty list of names.')
+      if (!silent) toast.error('Cannot save empty list of names.')
       return
     }
     try {
@@ -130,10 +133,10 @@ export default function App() {
       });
       await batch.commit();
       setSampleNames(cleaned);
-      if (!silent) alert('Sample names saved');
+      if (!silent) toast.success('Player names saved');
     } catch (e) {
       console.error('Save failed', e);
-      if (!silent) alert('Failed to save names. Check console and Firebase rules.');
+      if (!silent) toast.error('Failed to save names. Check console and Firebase rules.');
     }
   }
 
@@ -194,6 +197,7 @@ export default function App() {
 
   return (
     <div data-theme={selectedTheme.id} className={`min-h-screen bg-[var(--bg)] text-[var(--fg)]`}>
+      <Toaster />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-center flex-1">padel matches</h1>
