@@ -445,10 +445,7 @@ export default function App() {
                     aria-pressed={selectedTheme.name === theme.name}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <span
-                        className="inline-block w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: theme.swatch, borderColor: "var(--border)" }}
-                      />
+                      <span className="inline-block w-4 h-4 rounded-full border theme-swatch" data-swatch={theme.swatch} />
                       <span>{theme.name}</span>
                     </div>
                   </button>
@@ -466,3 +463,13 @@ export default function App() {
     </div>
   );
 }
+
+/* Add this CSS to src/index.css or a global CSS file:
+.theme-swatch {
+  border-color: var(--border);
+  background-color: var(--bg);
+}
+.theme-swatch[data-swatch] {
+  background-color: attr(data-swatch color, #fff);
+}
+*/
