@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "003-split-monolithic-app-tsx-into-smaller-components",
+  "state": "planning",
+  "subtasks": {
+    "completed": 0,
+    "total": 0,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Extract Foundation (Types & Utils)",
+    "id": null,
+    "total": 2
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 2,
+    "started_at": "2026-01-31T18:01:49.917579"
+  },
+  "last_update": "2026-01-31T18:05:20.937003"
+}

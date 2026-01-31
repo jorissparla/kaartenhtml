@@ -1,0 +1,39 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Glob(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Grep(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/.auto-claude/specs/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/.auto-claude/specs/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/003-split-monolithic-app-tsx-into-smaller-components/.auto-claude/specs/003-split-monolithic-app-tsx-into-smaller-components/**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Glob(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Grep(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

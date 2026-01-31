@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Toaster, toast } from 'react-hot-toast';
-
-type PlayerNum = { name: string; number: number | '-' }
-type Match = { team1: [PlayerNum, PlayerNum]; team2: [PlayerNum, PlayerNum] }
+import { PlayerNum, Match } from './types';
 
 
 
