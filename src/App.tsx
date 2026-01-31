@@ -5,34 +5,16 @@ import { shuffle, generateMatches } from './utils/matchGenerator';
 import { themes, Theme } from './themes';
 import { useTheme } from './hooks/useTheme';
 import { useSampleNames } from './hooks/useSampleNames';
+import { usePlayerManagement } from './hooks/usePlayerManagement';
 
 export default function App() {
-  const [players, setPlayers] = useState<string[]>([])
-  const [playerInput, setPlayerInput] = useState<string>('')
   const [showResults, setShowResults] = useState<boolean>(false)
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
   const [settingsNames, setSettingsNames] = useState<string[]>([])
   const [newSampleName, setNewSampleName] = useState('')
   const { selectedTheme, setSelectedTheme, themeOpen, openTheme, closeTheme } = useTheme();
   const { sampleNames, saveSampleNames } = useSampleNames();
-
-  const maxPlayers = 16
-
-  function handleAddPlayer(e: React.FormEvent) {
-    e.preventDefault()
-    const name = playerInput.trim()
-    if (!name || players.length >= maxPlayers) return
-    setPlayers((p) => [...p, name])
-    setPlayerInput('')
-  }
-
-  function removePlayer(index: number) {
-    setPlayers((arr) => arr.filter((_, i) => i !== index))
-  }
-
-  function quickFill() {
-    setPlayers(shuffle(sampleNames))
-  }
+  const { players, playerInput, setPlayerInput, maxPlayers, handleAddPlayer, removePlayer, quickFill } = usePlayerManagement(sampleNames);
 
   const numbers = useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults])
   const cards = useMemo(
