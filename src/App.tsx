@@ -5,6 +5,7 @@ import { shuffle, generateMatches } from './utils/matchGenerator';
 import { themes, Theme } from './themes';
 import { db } from './firebase';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { useTheme } from './hooks/useTheme';
 
 export default function App() {
   const [players, setPlayers] = useState<string[]>([])
@@ -12,11 +13,9 @@ export default function App() {
   const [sampleNames, setSampleNames] = useState<string[]>([])
   const [showResults, setShowResults] = useState<boolean>(false)
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
-  const [themeOpen, setThemeOpen] = useState<boolean>(false)
   const [settingsNames, setSettingsNames] = useState<string[]>([])
   const [newSampleName, setNewSampleName] = useState('')
-  const defaultTheme: Theme = themes.find((t) => t.id === 'light') ?? { name: 'Light', id: 'light', swatch: '#0969da' }
-  const [selectedTheme, setSelectedTheme] = useState<Theme>(defaultTheme);
+  const { selectedTheme, setSelectedTheme, themeOpen, openTheme, closeTheme } = useTheme();
 
   useEffect(() => {
     async function load() {
@@ -54,19 +53,7 @@ export default function App() {
     load();
   }, []);
 
-  useEffect(() => {
-    const savedThemeName = localStorage.getItem('theme');
-    if (savedThemeName) {
-      const found = themes.find((t) => t.name === savedThemeName);
-      setSelectedTheme((prev) => (found ? found : prev));
-    }
-  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('theme', selectedTheme.name);
-  }, [selectedTheme]);
-
-  
 
 async function saveSampleNames(names: string[], { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}) {
     const cleaned = Array.from(new Set((names || []).map((n) => (typeof n === 'string' ? n.trim() : '')).filter(Boolean))).sort(
@@ -128,12 +115,6 @@ async function saveSampleNames(names: string[], { replaceAll = true, silent = fa
   }
   function closeSettings() {
     setSettingsOpen(false)
-  }
-  function openTheme() {
-    setThemeOpen(true)
-  }
-  function closeTheme() {
-    setThemeOpen(false)
   }
   async function saveSettings() {
     await saveSampleNames(settingsNames, { replaceAll: true })
