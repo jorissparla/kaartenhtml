@@ -1,88 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Toaster, toast } from 'react-hot-toast';
+import React, { useMemo, useState } from 'react'
+import { Toaster } from 'react-hot-toast';
 import { PlayerNum, Match } from './types';
 import { shuffle, generateMatches } from './utils/matchGenerator';
 import { themes, Theme } from './themes';
-import { db } from './firebase';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { useTheme } from './hooks/useTheme';
+import { useSampleNames } from './hooks/useSampleNames';
 
 export default function App() {
   const [players, setPlayers] = useState<string[]>([])
   const [playerInput, setPlayerInput] = useState<string>('')
-  const [sampleNames, setSampleNames] = useState<string[]>([])
   const [showResults, setShowResults] = useState<boolean>(false)
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
   const [settingsNames, setSettingsNames] = useState<string[]>([])
   const [newSampleName, setNewSampleName] = useState('')
   const { selectedTheme, setSelectedTheme, themeOpen, openTheme, closeTheme } = useTheme();
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'sample_names'));
-        if (querySnapshot.empty) {
-          const DEFAULT_SAMPLE_NAMES = [
-            'Joris',
-            'Rene',
-            'Boudewijn',
-            'JanB',
-            'JanJ',
-            'Koos',
-            'Johan',
-            'Ronald',
-            'Mart',
-            'Frank',
-            'Justin',
-            'Jurgen',
-            'Johnny',
-            'Willem',
-            'Edwin',
-            'Martijn',
-          ].sort((a, b) => a.localeCompare(b));
-          setSampleNames(DEFAULT_SAMPLE_NAMES);
-          await saveSampleNames(DEFAULT_SAMPLE_NAMES, { silent: true });
-        } else {
-          const names = querySnapshot.docs.map(doc => doc.data().name).sort((a, b) => a.localeCompare(b));
-          setSampleNames(names);
-        }
-      } catch (e) {
-        console.warn('Load names failed; using defaults', e);
-      }
-    }
-    load();
-  }, []);
-
-
-
-async function saveSampleNames(names: string[], { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}) {
-    const cleaned = Array.from(new Set((names || []).map((n) => (typeof n === 'string' ? n.trim() : '')).filter(Boolean))).sort(
-      (a, b) => a.localeCompare(b)
-    )
-    if (cleaned.length === 0) {
-      if (!silent) toast.error('Cannot save empty list of names.')
-      return
-    }
-    try {
-      const batch = writeBatch(db);
-      if (replaceAll) {
-        const querySnapshot = await getDocs(collection(db, 'sample_names'));
-        querySnapshot.forEach(doc => {
-          batch.delete(doc.ref);
-        });
-      }
-      cleaned.forEach(name => {
-        const docRef = doc(collection(db, 'sample_names'));
-        batch.set(docRef, { name });
-      });
-      await batch.commit();
-      setSampleNames(cleaned);
-      if (!silent) toast.success('Player names saved');
-    } catch (e) {
-      console.error('Save failed', e);
-      if (!silent) toast.error('Failed to save names. Check console and Firebase rules.');
-    }
-  }
+  const { sampleNames, saveSampleNames } = useSampleNames();
 
   const maxPlayers = 16
 
