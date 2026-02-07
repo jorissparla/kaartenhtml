@@ -1,0 +1,39 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/**)",
+      "Glob(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/**)",
+      "Grep(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/.auto-claude/specs/001-add-copy-match-schedule-to-clipboard/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/.auto-claude/specs/001-add-copy-match-schedule-to-clipboard/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/worktrees/tasks/001-add-copy-match-schedule-to-clipboard/.auto-claude/specs/001-add-copy-match-schedule-to-clipboard/**)",
+      "Read(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Write(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Edit(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Glob(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Grep(/Users/jorissparla/sites/kaartenhtml/.auto-claude/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "001-add-copy-match-schedule-to-clipboard",
+  "state": "planning",
+  "subtasks": {
+    "completed": 0,
+    "total": 0,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Copy to Clipboard Feature",
+    "id": null,
+    "total": 4
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 2,
+    "started_at": "2026-01-31T18:01:24.900122"
+  },
+  "last_update": "2026-01-31T18:04:20.270697"
+}
