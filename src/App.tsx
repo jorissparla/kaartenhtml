@@ -8,6 +8,7 @@ import { usePlayerManagement } from './hooks/usePlayerManagement';
 import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
 import ThemeModal from './components/ThemeModal';
+import PlayerForm from './components/PlayerForm';
 
 export default function App() {
   const [showResults, setShowResults] = useState<boolean>(false)
@@ -48,18 +49,11 @@ export default function App() {
               </button>
             </div>
 
-            <form onSubmit={handleAddPlayer} className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={playerInput}
-                onChange={(e) => setPlayerInput(e.target.value)}
-                className="flex-grow p-2 rounded bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                placeholder="Enter player name"
-              />
-              <button type="submit" className={`bg-primary bg-primary-hover py-2 px-4 rounded-lg text-[var(--primary-contrast)] font-semibold transition-colors`}>
-                Add
-              </button>
-            </form>
+            <PlayerForm
+              playerInput={playerInput}
+              setPlayerInput={setPlayerInput}
+              handleAddPlayer={handleAddPlayer}
+            />
 
             <div className="space-y-2">
               {players.map((p, i) => (
