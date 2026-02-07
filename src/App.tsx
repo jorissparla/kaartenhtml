@@ -4,9 +4,8 @@ import { Toaster, toast } from "react-hot-toast";
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
 import { db } from "./firebase";
-
-type PlayerNum = { name: string; number: number | "-" };
-type Match = { team1: [PlayerNum, PlayerNum]; team2: [PlayerNum, PlayerNum] };
+import PlayerCards from "./components/PlayerCards";
+import { PlayerNum, Match } from "./types";
 
 function shuffle<T>(array: T[]): T[] {
   const arr = [...array];
