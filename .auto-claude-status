@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "003-split-monolithic-app-tsx-into-smaller-components",
-  "state": "building",
+  "spec": "001-add-copy-match-schedule-to-clipboard",
+  "state": "planning",
   "subtasks": {
-    "completed": 13,
-    "total": 14,
+    "completed": 0,
+    "total": 0,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Cleanup & Final Verification",
+    "current": "Copy to Clipboard Feature",
     "id": null,
-    "total": 2
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 7,
-    "started_at": "2026-02-07T14:03:39.337145"
+    "number": 2,
+    "started_at": "2026-01-31T18:01:24.900122"
   },
-  "last_update": "2026-02-07T14:17:03.093913"
+  "last_update": "2026-01-31T18:04:20.270697"
 }
