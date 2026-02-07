@@ -27,18 +27,11 @@ export default function App() {
   )
   const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players) : []), [showResults, players])
 
-  function openSettings() {
-    setSettingsOpen(true)
-  }
-  function closeSettings() {
-    setSettingsOpen(false)
-  }
-
   return (
     <div data-theme={selectedTheme.id} className={`min-h-screen bg-[var(--bg)] text-[var(--fg)]`}>
       <Toaster />
       <div className="container mx-auto px-4 py-8">
-        <Header onOpenTheme={openTheme} onOpenSettings={openSettings} />
+        <Header onOpenTheme={openTheme} onOpenSettings={() => setSettingsOpen(true)} />
 
         <div className="mb-16">
           <div className={`max-w-md mx-auto bg-surface p-6 rounded-lg shadow-lg mb-8`}>
@@ -84,7 +77,7 @@ export default function App() {
 
       <SettingsModal
         isOpen={settingsOpen}
-        onClose={closeSettings}
+        onClose={() => setSettingsOpen(false)}
         sampleNames={sampleNames}
         saveSampleNames={saveSampleNames}
       />
