@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "002-add-security-headers-to-vercel-deployment",
+  "state": "complete",
+  "subtasks": {
+    "completed": 2,
+    "total": 2,
+    "in_progress": 0,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Add Security Headers Configuration",
+    "id": null,
+    "total": 2
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 3,
+    "started_at": "2026-01-31T18:01:56.545583"
+  },
+  "last_update": "2026-01-31T18:08:23.820931"
+}

@@ -1,2 +1,5 @@
 node_modules/
 .vercel
+
+# Auto Claude data directory
+.auto-claude/
