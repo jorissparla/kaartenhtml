@@ -5,6 +5,7 @@ import { shuffle, generateMatches } from './utils/matchGenerator';
 import { useTheme } from './hooks/useTheme';
 import { useSampleNames } from './hooks/useSampleNames';
 import { usePlayerManagement } from './hooks/usePlayerManagement';
+import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
 import ThemeModal from './components/ThemeModal';
 
@@ -33,23 +34,7 @@ export default function App() {
     <div data-theme={selectedTheme.id} className={`min-h-screen bg-[var(--bg)] text-[var(--fg)]`}>
       <Toaster />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-center flex-1">padel matches</h1>
-          <div className="flex items-center">
-            <button
-              onClick={openTheme}
-              className={`ml-4 text-sm bg-surface hover:bg-opacity-80 py-2 px-3 rounded transition-colors`}
-            >
-              Theme
-            </button>
-            <button
-              onClick={openSettings}
-              className={`ml-2 text-sm bg-surface hover:bg-opacity-80 py-2 px-3 rounded transition-colors`}
-            >
-              Settings
-            </button>
-          </div>
-        </div>
+        <Header onOpenTheme={openTheme} onOpenSettings={openSettings} />
 
         <div className="mb-16">
           <div className={`max-w-md mx-auto bg-surface p-6 rounded-lg shadow-lg mb-8`}>
