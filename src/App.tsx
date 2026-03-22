@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Theme, themes } from "./themes";
 import { Toaster, toast } from "react-hot-toast";
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
@@ -6,7 +6,7 @@ import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import PlayerCards from "./components/PlayerCards";
 import MatchSchedule from "./components/MatchSchedule";
-import type { CourtSetup } from "./types";
+import type { CourtSetup, Match } from "./types";
 import { loadCourtSetups, replaceAllCourtSetups, normalizeCourtSetupDraft, MAX_COURTS_PER_SETUP } from "./utils/courtSetupsFirestore";
 import { shuffle, generateMatches, defaultNumCourts, autoCourtLabels } from "./utils/matchGenerator";
 
@@ -17,6 +17,7 @@ export default function App() {
   const [playerInput, setPlayerInput] = useState<string>("");
   const [sampleNames, setSampleNames] = useState<string[]>([]);
   const [showResults, setShowResults] = useState<boolean>(false);
+  const [matchScheduleGeneration, setMatchScheduleGeneration] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [themeOpen, setThemeOpen] = useState<boolean>(false);
   const [settingsNames, setSettingsNames] = useState<string[]>([]);
@@ -29,8 +30,11 @@ export default function App() {
     return raw && raw !== "auto" ? raw : "auto";
   });
   const [courtSetupsHydrated, setCourtSetupsHydrated] = useState(false);
+  const [postGenTab, setPostGenTab] = useState<"schedule" | "numbers">("schedule");
+  const [settingsSection, setSettingsSection] = useState<"names" | "courts">("names");
   const defaultTheme: Theme = themes.find((t) => t.id === "light") ?? { name: "Light", id: "light", swatch: "#0969da" };
   const [selectedTheme, setSelectedTheme] = useState<Theme>(defaultTheme);
+  const postGenMobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -106,6 +110,25 @@ export default function App() {
     localStorage.setItem("theme", selectedTheme.name);
   }, [selectedTheme]);
 
+  useEffect(() => {
+    if (showResults) setPostGenTab("schedule");
+  }, [showResults]);
+
+  useEffect(() => {
+    if (!showResults) return;
+    if (!window.matchMedia("(max-width: 639px)").matches) return;
+    let innerRaf = 0;
+    const outerRaf = requestAnimationFrame(() => {
+      innerRaf = requestAnimationFrame(() => {
+        postGenMobileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outerRaf);
+      cancelAnimationFrame(innerRaf);
+    };
+  }, [showResults]);
+
   async function saveSampleNames(
     names: string[],
     { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}
@@ -171,16 +194,17 @@ export default function App() {
     return { numCourts: setup.courts.length, courtLabels: setup.courts };
   }, [selectedCourtSetupId, courtSetups, players.length]);
 
-  const numbers = useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults]);
+  const numbers = useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults, matchScheduleGeneration]);
   const cards = useMemo(
     () => players.map((name, i) => ({ name, number: numbers[i] ?? i + 1 })).sort((a, b) => a.number - b.number),
     [players, numbers]
   );
-  const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players, numCourts) : []), [showResults, players, numCourts]);
+  const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players, numCourts) : []), [showResults, players, numCourts, matchScheduleGeneration]);
 
   function openSettings() {
     setSettingsNames(sampleNames);
     setSettingsCourtSetups(courtSetups.map((s) => ({ ...s, courts: [...s.courts] })));
+    setSettingsSection("names");
     setSettingsOpen(true);
   }
   function closeSettings() {
@@ -296,8 +320,10 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mb-16">
-          <div className={`max-w-md mx-auto bg-surface p-6 rounded-lg shadow-lg mb-8`}>
+        <div
+          className={`mb-16 flex flex-col gap-8 ${showResults ? "max-sm:flex-col-reverse max-sm:gap-6" : ""}`}
+        >
+          <div className={`max-w-md mx-auto bg-surface p-6 rounded-lg shadow-lg w-full`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Players ({players.length})</h2>
               <button
@@ -324,7 +350,7 @@ export default function App() {
               </button>
             </form>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[min(50vh,20rem)] sm:max-h-none overflow-y-auto pr-0.5">
               {players.map((p, i) => (
                 <div key={`${p}-${i}`} className={`flex items-center justify-between bg-surface p-3 rounded-lg`}>
                   <span className="font-semibold">{p}</span>
@@ -360,7 +386,10 @@ export default function App() {
                   ))}
                 </select>
                 <button
-                  onClick={() => setShowResults(true)}
+                  onClick={() => {
+                    setShowResults(true);
+                    setMatchScheduleGeneration((n) => n + 1);
+                  }}
                   className={`w-full bg-primary bg-primary-hover text-[var(--primary-contrast)] py-2 px-4 rounded transition-colors`}
                 >
                   Finish & Generate Matches
@@ -371,11 +400,64 @@ export default function App() {
 
           {showResults && (
             <>
-              <PlayerCards cards={cards} />
+              <div ref={postGenMobileRef} className="sm:hidden max-w-md mx-auto w-full scroll-mt-4">
+                <div
+                  role="tablist"
+                  aria-label="Match results"
+                  className="flex rounded-lg border border-token overflow-hidden mb-4"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={postGenTab === "schedule"}
+                    id="postgen-tab-schedule"
+                    aria-controls="postgen-panel-schedule"
+                    onClick={() => setPostGenTab("schedule")}
+                    className={`flex-1 py-2.5 px-3 text-sm font-semibold transition-colors ${
+                      postGenTab === "schedule" ? "bg-primary text-[var(--primary-contrast)]" : "bg-surface text-fg hover:bg-opacity-80"
+                    }`}
+                  >
+                    Schedule
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={postGenTab === "numbers"}
+                    id="postgen-tab-numbers"
+                    aria-controls="postgen-panel-numbers"
+                    onClick={() => setPostGenTab("numbers")}
+                    className={`flex-1 py-2.5 px-3 text-sm font-semibold transition-colors border-l border-token ${
+                      postGenTab === "numbers" ? "bg-primary text-[var(--primary-contrast)]" : "bg-surface text-fg hover:bg-opacity-80"
+                    }`}
+                  >
+                    Player numbers
+                  </button>
+                </div>
+                <div
+                  role="tabpanel"
+                  id="postgen-panel-schedule"
+                  aria-labelledby="postgen-tab-schedule"
+                  hidden={postGenTab !== "schedule"}
+                  className={postGenTab !== "schedule" ? "hidden" : undefined}
+                >
+                  <MatchSchedule rounds={rounds} cards={cards} courtLabels={courtLabels} />
+                </div>
+                <div
+                  role="tabpanel"
+                  id="postgen-panel-numbers"
+                  aria-labelledby="postgen-tab-numbers"
+                  hidden={postGenTab !== "numbers"}
+                  className={postGenTab !== "numbers" ? "hidden" : undefined}
+                >
+                  <PlayerCards cards={cards} />
+                </div>
+              </div>
 
-              <hr className="border-t border-token my-12" />
-
-              <MatchSchedule rounds={rounds} cards={cards} courtLabels={courtLabels} />
+              <div className="hidden sm:block">
+                <PlayerCards cards={cards} />
+                <hr className="border-t border-token my-6 sm:my-12" />
+                <MatchSchedule rounds={rounds} cards={cards} courtLabels={courtLabels} />
+              </div>
             </>
           )}
         </div>
@@ -398,8 +480,44 @@ export default function App() {
                 </svg>
               </button>
             </div>
-            <div className="p-4 space-y-6 overflow-y-auto flex-1 min-h-0">
-              <div>
+            <div className="px-4 pt-3 pb-3 border-b border-token shrink-0">
+              <div role="tablist" aria-label="Settings sections" className="flex rounded-lg border border-token overflow-hidden">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={settingsSection === "names"}
+                  id="settings-tab-names"
+                  aria-controls="settings-panel-names"
+                  onClick={() => setSettingsSection("names")}
+                  className={`flex-1 py-2.5 px-3 text-sm font-semibold transition-colors ${
+                    settingsSection === "names" ? "bg-primary text-[var(--primary-contrast)]" : "bg-surface text-fg hover:bg-opacity-80"
+                  }`}
+                >
+                  Sample names
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={settingsSection === "courts"}
+                  id="settings-tab-courts"
+                  aria-controls="settings-panel-courts"
+                  onClick={() => setSettingsSection("courts")}
+                  className={`flex-1 py-2.5 px-3 text-sm font-semibold transition-colors border-l border-token ${
+                    settingsSection === "courts" ? "bg-primary text-[var(--primary-contrast)]" : "bg-surface text-fg hover:bg-opacity-80"
+                  }`}
+                >
+                  Court setups
+                </button>
+              </div>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 min-h-0">
+              <div
+                role="tabpanel"
+                id="settings-panel-names"
+                aria-labelledby="settings-tab-names"
+                hidden={settingsSection !== "names"}
+                className={settingsSection !== "names" ? "hidden" : undefined}
+              >
                 <h4 className="text-sm font-semibold text-fg mb-2">Sample names (quick fill)</h4>
                 <div className="flex gap-2 mb-2">
                   <input
@@ -447,7 +565,13 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`border-t border-token pt-4`}>
+              <div
+                role="tabpanel"
+                id="settings-panel-courts"
+                aria-labelledby="settings-tab-courts"
+                hidden={settingsSection !== "courts"}
+                className={settingsSection !== "courts" ? "hidden" : undefined}
+              >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <h4 className="text-sm font-semibold text-fg">Court setups</h4>
                   <button
