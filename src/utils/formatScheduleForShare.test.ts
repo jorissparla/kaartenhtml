@@ -31,14 +31,18 @@ describe("formatScheduleForShare", () => {
     expect(text).toContain("Bob (7)");
     expect(text).toContain("Carol (2)");
     expect(text).toContain("Dan (5)");
-    expect(text).toContain("Round 1");
-    expect(text).toContain("Court 1:");
-    expect(text).toContain(" vs ");
+    expect(text).toContain("*Round 1*");
+    expect(text).toContain("Court 1");
+    expect(text).toMatch(/\nCourt 1\n/);
+    expect(text).toContain("    vs");
+    expect(text).toContain("Padel match schedule");
+    expect(text).toContain("─".repeat(20));
   });
 
   it("uses custom court labels when provided", () => {
     const text = formatScheduleForShare(rounds, cards, ["Center court"]);
-    expect(text).toContain("Center court:");
-    expect(text).not.toContain("Court 1:");
+    expect(text).toContain("Center court");
+    expect(text).toMatch(/\nCenter court\n/);
+    expect(text).not.toContain("Court 1");
   });
 });

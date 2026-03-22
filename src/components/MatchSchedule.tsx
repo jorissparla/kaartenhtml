@@ -9,6 +9,9 @@ interface MatchScheduleProps {
   courtLabels?: string[];
 }
 
+/** Encoded `text` length above this risks broken wa.me URLs in some browsers. */
+const WHATSAPP_URL_ENCODED_MAX = 1900;
+
 function courtHeading(courtIndex: number, courtLabels?: string[]): string {
   const custom = courtLabels?.[courtIndex];
   if (custom) return custom;
@@ -18,14 +21,20 @@ function courtHeading(courtIndex: number, courtLabels?: string[]): string {
 export default function MatchSchedule({ rounds, cards, courtLabels }: MatchScheduleProps) {
   const scheduleText = useMemo(() => formatScheduleForShare(rounds, cards, courtLabels), [rounds, cards, courtLabels]);
 
-  const copySchedule = useCallback(async () => {
+  const writeScheduleToClipboard = useCallback(async (): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(scheduleText);
-      toast.success("Schedule copied");
+      return true;
     } catch {
-      toast.error("Could not copy");
+      return false;
     }
   }, [scheduleText]);
+
+  const copySchedule = useCallback(async () => {
+    const ok = await writeScheduleToClipboard();
+    if (ok) toast.success("Copied — paste in WhatsApp");
+    else toast.error("Could not copy");
+  }, [writeScheduleToClipboard]);
 
   const shareSchedule = useCallback(async () => {
     if (navigator.share) {
@@ -39,6 +48,17 @@ export default function MatchSchedule({ rounds, cards, courtLabels }: MatchSched
     await copySchedule();
   }, [scheduleText, copySchedule]);
 
+  const openWhatsApp = useCallback(async () => {
+    const encoded = encodeURIComponent(scheduleText);
+    if (encoded.length > WHATSAPP_URL_ENCODED_MAX) {
+      const ok = await writeScheduleToClipboard();
+      if (ok) toast.success("Too long for WhatsApp link — copied instead");
+      else toast.error("Could not copy");
+      return;
+    }
+    window.open(`https://wa.me/?text=${encoded}`, "_blank", "noopener,noreferrer");
+  }, [scheduleText, writeScheduleToClipboard]);
+
   return (
     <div className={`bg-[var(--bg)] rounded-xl p-8`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -50,6 +70,13 @@ export default function MatchSchedule({ rounds, cards, courtLabels }: MatchSched
             className={`text-sm bg-surface hover:bg-opacity-80 py-2 px-3 rounded transition-colors border border-token`}
           >
             Copy text
+          </button>
+          <button
+            type="button"
+            onClick={() => void openWhatsApp()}
+            className={`text-sm bg-surface hover:bg-opacity-80 py-2 px-3 rounded transition-colors border border-token`}
+          >
+            WhatsApp
           </button>
           <button
             type="button"
