@@ -5,44 +5,12 @@ import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
 import { db } from "./firebase";
 import PlayerCards from "./components/PlayerCards";
-import { PlayerNum, Match } from "./types";
+import MatchSchedule from "./components/MatchSchedule";
+import type { CourtSetup } from "./types";
+import { loadCourtSetups, replaceAllCourtSetups, normalizeCourtSetupDraft, MAX_COURTS_PER_SETUP } from "./utils/courtSetupsFirestore";
+import { shuffle, generateMatches, defaultNumCourts, autoCourtLabels } from "./utils/matchGenerator";
 
-function shuffle<T>(array: T[]): T[] {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = arr[i]!;
-    arr[i] = arr[j]!;
-    arr[j] = tmp;
-  }
-  return arr;
-}
-
-function generateMatches(players: string[]): Match[][] {
-  const rounds: Match[][] = [];
-  const playerNumbers: PlayerNum[] = players.map((player, index) => ({ name: player, number: index + 1 }));
-  if (playerNumbers.length % 2 !== 0) playerNumbers.push({ name: "Dummy", number: "-" });
-  const numCourts = playerNumbers.length >= 12 ? 3 : 2;
-  for (let round = 0; round < 3; round++) {
-    const matches: Match[] = [];
-    const available = [...playerNumbers];
-    let courtCount = 0;
-    while (available.length >= 4 && courtCount < numCourts) {
-      const team1: [PlayerNum, PlayerNum] = [
-        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
-        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
-      ];
-      const team2: [PlayerNum, PlayerNum] = [
-        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
-        available.splice(Math.floor(Math.random() * available.length), 1)[0]!,
-      ];
-      matches.push({ team1, team2 });
-      courtCount++;
-    }
-    rounds.push(matches);
-  }
-  return rounds;
-}
+const COURT_SETUP_STORAGE_KEY = "courtSetupSelection";
 
 export default function App() {
   const [players, setPlayers] = useState<string[]>([]);
@@ -53,6 +21,14 @@ export default function App() {
   const [themeOpen, setThemeOpen] = useState<boolean>(false);
   const [settingsNames, setSettingsNames] = useState<string[]>([]);
   const [newSampleName, setNewSampleName] = useState("");
+  const [courtSetups, setCourtSetups] = useState<CourtSetup[]>([]);
+  const [settingsCourtSetups, setSettingsCourtSetups] = useState<CourtSetup[]>([]);
+  const [selectedCourtSetupId, setSelectedCourtSetupId] = useState<string>(() => {
+    if (typeof window === "undefined") return "auto";
+    const raw = localStorage.getItem(COURT_SETUP_STORAGE_KEY);
+    return raw && raw !== "auto" ? raw : "auto";
+  });
+  const [courtSetupsHydrated, setCourtSetupsHydrated] = useState(false);
   const defaultTheme: Theme = themes.find((t) => t.id === "light") ?? { name: "Light", id: "light", swatch: "#0969da" };
   const [selectedTheme, setSelectedTheme] = useState<Theme>(defaultTheme);
 
@@ -93,6 +69,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    async function loadCourts() {
+      try {
+        const setups = await loadCourtSetups(db);
+        setCourtSetups(setups);
+      } catch (e) {
+        console.warn("Load court setups failed", e);
+      } finally {
+        setCourtSetupsHydrated(true);
+      }
+    }
+    void loadCourts();
+  }, []);
+
+  useEffect(() => {
+    if (!courtSetupsHydrated) return;
+    if (selectedCourtSetupId === "auto") return;
+    if (!courtSetups.some((s) => s.id === selectedCourtSetupId)) {
+      setSelectedCourtSetupId("auto");
+    }
+  }, [courtSetups, courtSetupsHydrated, selectedCourtSetupId]);
+
+  useEffect(() => {
+    localStorage.setItem(COURT_SETUP_STORAGE_KEY, selectedCourtSetupId);
+  }, [selectedCourtSetupId]);
+
+  useEffect(() => {
     const savedThemeName = localStorage.getItem("theme");
     if (savedThemeName) {
       const found = themes.find((t) => t.name === savedThemeName);
@@ -104,13 +106,16 @@ export default function App() {
     localStorage.setItem("theme", selectedTheme.name);
   }, [selectedTheme]);
 
-  async function saveSampleNames(names: string[], { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}) {
+  async function saveSampleNames(
+    names: string[],
+    { replaceAll = true, silent = false }: { replaceAll?: boolean; silent?: boolean } = {}
+  ): Promise<boolean> {
     const cleaned = Array.from(new Set((names || []).map((n) => (typeof n === "string" ? n.trim() : "")).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b)
     );
     if (cleaned.length === 0) {
       if (!silent) toast.error("Cannot save empty list of names.");
-      return;
+      return false;
     }
     try {
       const batch = writeBatch(db);
@@ -127,9 +132,11 @@ export default function App() {
       await batch.commit();
       setSampleNames(cleaned);
       if (!silent) toast.success("Player names saved");
+      return true;
     } catch (e) {
       console.error("Save failed", e);
       if (!silent) toast.error("Failed to save names. Check console and Firebase rules.");
+      return false;
     }
   }
 
@@ -151,15 +158,29 @@ export default function App() {
     setPlayers(shuffle(sampleNames));
   }
 
+  const { numCourts, courtLabels } = useMemo(() => {
+    if (selectedCourtSetupId === "auto") {
+      const n = defaultNumCourts(players.length);
+      return { numCourts: n, courtLabels: autoCourtLabels(n) };
+    }
+    const setup = courtSetups.find((s) => s.id === selectedCourtSetupId);
+    if (!setup) {
+      const n = defaultNumCourts(players.length);
+      return { numCourts: n, courtLabels: autoCourtLabels(n) };
+    }
+    return { numCourts: setup.courts.length, courtLabels: setup.courts };
+  }, [selectedCourtSetupId, courtSetups, players.length]);
+
   const numbers = useMemo<number[]>(() => shuffle([...Array(players.length)].map((_, i) => i + 1)), [players.length, showResults]);
   const cards = useMemo(
     () => players.map((name, i) => ({ name, number: numbers[i] ?? i + 1 })).sort((a, b) => a.number - b.number),
     [players, numbers]
   );
-  const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players) : []), [showResults, players]);
+  const rounds = useMemo<Match[][]>(() => (showResults ? generateMatches(players, numCourts) : []), [showResults, players, numCourts]);
 
   function openSettings() {
     setSettingsNames(sampleNames);
+    setSettingsCourtSetups(courtSetups.map((s) => ({ ...s, courts: [...s.courts] })));
     setSettingsOpen(true);
   }
   function closeSettings() {
@@ -172,8 +193,79 @@ export default function App() {
     setThemeOpen(false);
   }
   async function saveSettings() {
-    await saveSampleNames(settingsNames, { replaceAll: true });
-    setSettingsOpen(false);
+    const nameCleaned = Array.from(
+      new Set((settingsNames || []).map((n) => (typeof n === "string" ? n.trim() : "")).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+    if (nameCleaned.length === 0) {
+      toast.error("Cannot save empty list of names.");
+      return;
+    }
+    try {
+      const namesOk = await saveSampleNames(settingsNames, { replaceAll: true, silent: true });
+      if (!namesOk) {
+        toast.error("Failed to save sample names. Check console and Firebase rules.");
+        return;
+      }
+      const validOldIds = settingsCourtSetups
+        .filter((s) => normalizeCourtSetupDraft({ label: s.label, courts: s.courts }))
+        .map((s) => s.id);
+      const next = await replaceAllCourtSetups(
+        db,
+        settingsCourtSetups.map((s) => ({ label: s.label, courts: s.courts }))
+      );
+      setCourtSetups(next);
+      if (selectedCourtSetupId !== "auto") {
+        const idx = validOldIds.indexOf(selectedCourtSetupId);
+        if (idx >= 0 && next[idx]) setSelectedCourtSetupId(next[idx]!.id);
+        else setSelectedCourtSetupId("auto");
+      }
+      toast.success("Settings saved");
+      setSettingsOpen(false);
+    } catch (e) {
+      console.error("Settings save failed", e);
+      toast.error("Failed to save settings. Check console and Firebase rules.");
+    }
+  }
+
+  function addCourtSetup() {
+    setSettingsCourtSetups((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), label: "New setup", courts: ["Court 1"] },
+    ]);
+  }
+
+  function removeCourtSetup(index: number) {
+    setSettingsCourtSetups((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateCourtSetupLabel(index: number, label: string) {
+    setSettingsCourtSetups((prev) => prev.map((s, i) => (i === index ? { ...s, label } : s)));
+  }
+
+  function addCourtToSetup(setupIndex: number) {
+    setSettingsCourtSetups((prev) =>
+      prev.map((s, i) => {
+        if (i !== setupIndex || s.courts.length >= MAX_COURTS_PER_SETUP) return s;
+        return { ...s, courts: [...s.courts, `Court ${s.courts.length + 1}`] };
+      })
+    );
+  }
+
+  function updateCourtName(setupIndex: number, courtIndex: number, name: string) {
+    setSettingsCourtSetups((prev) =>
+      prev.map((s, i) => {
+        if (i !== setupIndex) return s;
+        const courts = [...s.courts];
+        courts[courtIndex] = name;
+        return { ...s, courts };
+      })
+    );
+  }
+
+  function removeCourtFromSetup(setupIndex: number, courtIndex: number) {
+    setSettingsCourtSetups((prev) =>
+      prev.map((s, i) => (i === setupIndex ? { ...s, courts: s.courts.filter((_, j) => j !== courtIndex) } : s))
+    );
   }
 
   function handleAddSampleName() {
@@ -250,12 +342,30 @@ export default function App() {
             </div>
 
             {players.length > 0 && (
-              <button
-                onClick={() => setShowResults(true)}
-                className={`w-full bg-primary bg-primary-hover text-[var(--primary-contrast)] py-2 px-4 rounded transition-colors mt-4`}
-              >
-                Finish & Generate Matches
-              </button>
+              <>
+                <label htmlFor="court-setup-select" className={`block text-sm font-medium mt-4 mb-1 text-fg`}>
+                  Court setup
+                </label>
+                <select
+                  id="court-setup-select"
+                  value={selectedCourtSetupId}
+                  onChange={(e) => setSelectedCourtSetupId(e.target.value)}
+                  className={`w-full p-2 rounded bg-surface text-fg border border-token focus:outline-none focus:ring-2 focus:ring-[var(--ring)] mb-4`}
+                >
+                  <option value="auto">Automatic (2 or 3 courts from number of players)</option>
+                  {courtSetups.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label} ({s.courts.length} {s.courts.length === 1 ? "court" : "courts"})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setShowResults(true)}
+                  className={`w-full bg-primary bg-primary-hover text-[var(--primary-contrast)] py-2 px-4 rounded transition-colors`}
+                >
+                  Finish & Generate Matches
+                </button>
+              </>
             )}
           </div>
 
@@ -265,63 +375,7 @@ export default function App() {
 
               <hr className="border-t border-token my-12" />
 
-              <div className={`bg-[var(--bg)] rounded-xl p-8`}>
-                <div>
-                  <h2 className={`text-2xl font-bold mb-6 text-fg`}>Match Schedule</h2>
-                  <div className="space-y-8">
-                    {rounds.map((round, roundIndex) => (
-                      <div key={roundIndex} className={`bg-surface p-5 rounded-lg border border-token`}>
-                        <h3 className={`text-xl font-bold mb-4 text-fg`}>Round {roundIndex + 1}</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {round.map((match, i) => (
-                            <div key={i} className={`bg-surface-2 p-4 rounded-lg border border-token hover:bg-opacity-80 transition-colors`}>
-                              <div className={`text-fg text-sm font-semibold mb-3 border-b border-token pb-2`}>Court {i + 1}</div>
-                              <div className="flex items-center justify-between gap-4">
-                                <div className="w-5/12">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span
-                                      className={`inline-flex items-center justify-center bg-primary text-[var(--primary-contrast)] w-6 h-6 rounded-full text-xs font-bold`}
-                                    >
-                                      {match.team1[0].number}
-                                    </span>
-                                    <span className={`text-fg truncate`}>{match.team1[0].name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span
-                                      className={`inline-flex items-center justify-center bg-primary text-[var(--primary-contrast)] w-6 h-6 rounded-full text-xs font-bold`}
-                                    >
-                                      {match.team1[1].number}
-                                    </span>
-                                    <span className={`text-fg truncate`}>{match.team1[1].name}</span>
-                                  </div>
-                                </div>
-                                <div className="w-5/12 text-right">
-                                  <div className="flex items-center gap-2 justify-end mb-2">
-                                    <span className={`text-fg truncate`}>{match.team2[0].name}</span>
-                                    <span
-                                      className={`inline-flex items-center justify-center bg-primary text-[var(--primary-contrast)] w-6 h-6 rounded-full text-xs font-bold`}
-                                    >
-                                      {match.team2[0].number}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 justify-end">
-                                    <span className={`text-fg truncate`}>{match.team2[1].name}</span>
-                                    <span
-                                      className={`inline-flex items-center justify-center bg-primary text-[var(--primary-contrast)] w-6 h-6 rounded-full text-xs font-bold`}
-                                    >
-                                      {match.team2[1].number}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <MatchSchedule rounds={rounds} cards={cards} courtLabels={courtLabels} />
             </>
           )}
         </div>
@@ -333,49 +387,103 @@ export default function App() {
           onClick={closeSettings}
         >
           <div
-            className={`settings-sheet bg-surface w-full max-w-xl rounded-t-lg sm:rounded-lg shadow-xl transform transition-transform duration-300 ease-in-out translate-y-full sm:translate-y-0`}
+            className={`settings-sheet bg-surface w-full max-w-2xl rounded-t-lg sm:rounded-lg shadow-xl transform transition-transform duration-300 ease-in-out translate-y-full sm:translate-y-0 max-h-[90vh] flex flex-col`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={`flex items-center justify-between p-4 border-b border-token`}>
-              <h3 className="text-lg font-semibold">Settings — Sample Names</h3>
+            <div className={`flex items-center justify-between p-4 border-b border-token shrink-0`}>
+              <h3 className="text-lg font-semibold">Settings</h3>
               <button onClick={closeSettings} className={`text-fg hover:opacity-80`} title="Close settings">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSampleName}
-                  onChange={(e) => setNewSampleName(e.target.value)}
-                  className={`flex-grow p-2 rounded bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] resize-none`}
-                  placeholder="Add a new name"
-                />
-                <button
-                  onClick={handleAddSampleName}
-                  className="bg-primary bg-primary-hover py-2 px-4 rounded-lg text-[var(--primary-contrast)] font-semibold transition-colors"
-                >
-                  Add
-                </button>
+            <div className="p-4 space-y-6 overflow-y-auto flex-1 min-h-0">
+              <div>
+                <h4 className="text-sm font-semibold text-fg mb-2">Sample names (quick fill)</h4>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newSampleName}
+                    onChange={(e) => setNewSampleName(e.target.value)}
+                    className={`flex-grow p-2 rounded bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] resize-none border border-token`}
+                    placeholder="Add a new name"
+                  />
+                  <button
+                    onClick={handleAddSampleName}
+                    className="bg-primary bg-primary-hover py-2 px-4 rounded-lg text-[var(--primary-contrast)] font-semibold transition-colors shrink-0"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className={`h-48 overflow-y-auto border border-token rounded-lg`}>
+                  <table className="w-full text-left">
+                    <tbody className={`divide-y divide-[var(--border)]`}>
+                      {settingsNames.map((name, index) => (
+                        <tr key={index}>
+                          <td className="p-3">{name}</td>
+                          <td className="p-3 text-right">
+                            <button onClick={() => handleRemoveSampleName(index)} className="text-accent hover:opacity-80" title="Remove name">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className={`h-60 overflow-y-auto border border-token rounded-lg`}>
-                <table className="w-full text-left">
-                  <tbody className={`divide-y divide-[var(--border)]`}>
-                    {settingsNames.map((name, index) => (
-                      <tr key={index}>
-                        <td className="p-3">{name}</td>
-                        <td className="p-3 text-right">
-                          <button onClick={() => handleRemoveSampleName(index)} className="text-accent hover:opacity-80" title="Remove name">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
+
+              <div className={`border-t border-token pt-4`}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-fg">Court setups</h4>
+                  <button
+                    type="button"
+                    onClick={addCourtSetup}
+                    className="text-sm bg-primary bg-primary-hover py-1.5 px-3 rounded text-[var(--primary-contrast)] font-semibold transition-colors"
+                  >
+                    Add setup
+                  </button>
+                </div>
+                <p className={`text-xs text-fg opacity-80 mb-3`}>
+                  Each setup is a day or venue: name it and list courts (order is kept). Up to {MAX_COURTS_PER_SETUP} courts per setup. Saved setups
+                  appear in the Court setup menu before you generate matches.
+                </p>
+                {settingsCourtSetups.length === 0 ? (
+                  <p className={`text-sm text-fg opacity-70 py-2`}>No setups yet. Add one to pick courts when generating.</p>
+                ) : (
+                  <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                    {settingsCourtSetups.map((setup, setupIndex) => (
+                      <div key={setup.id} className={`border border-token rounded-lg p-3 bg-surface-2`}>
+                        <div className="flex gap-2 items-start mb-2">
+                          <input
+                            type="text"
+                            value={setup.label}
+                            onChange={(e) => updateCourtSetupLabel(setupIndex, e.target.value)}
+                            className={`flex-grow p-2 rounded bg-surface text-fg text-sm border border-token focus:outline-none focus:ring-2 focus:ring-[var(--ring)]`}
+                            placeholder="Day or venue name"
+                            aria-label="Court setup name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeCourtSetup(setupIndex)}
+                            className="text-accent hover:opacity-80 p-2 shrink-0"
+                            title="Remove setup"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -383,14 +491,47 @@ export default function App() {
                               />
                             </svg>
                           </button>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="space-y-2">
+                          {setup.courts.map((courtName, courtIndex) => (
+                            <div key={courtIndex} className="flex gap-2 items-center">
+                              <input
+                                type="text"
+                                value={courtName}
+                                onChange={(e) => updateCourtName(setupIndex, courtIndex, e.target.value)}
+                                className={`flex-grow p-2 rounded bg-surface text-fg text-sm border border-token focus:outline-none focus:ring-2 focus:ring-[var(--ring)]`}
+                                placeholder="Court name"
+                                aria-label={`Court ${courtIndex + 1}`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeCourtFromSetup(setupIndex, courtIndex)}
+                                className="text-accent hover:opacity-80 p-1 shrink-0 text-sm"
+                                title="Remove court"
+                                disabled={setup.courts.length <= 1}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addCourtToSetup(setupIndex)}
+                          disabled={setup.courts.length >= MAX_COURTS_PER_SETUP}
+                          className={`mt-2 text-sm py-1.5 px-3 rounded border border-token transition-colors ${
+                            setup.courts.length >= MAX_COURTS_PER_SETUP ? "opacity-50 cursor-not-allowed" : "hover:bg-surface"
+                          }`}
+                        >
+                          Add court
+                        </button>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="p-4 flex items-center justify-end gap-4 border-t border-token">
+            <div className="p-4 flex items-center justify-end gap-4 border-t border-token shrink-0">
               <button
                 onClick={closeSettings}
                 className={`bg-surface hover:bg-opacity-80 py-2 px-4 rounded-lg text-fg font-semibold transition-colors`}
